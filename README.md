@@ -260,6 +260,34 @@ Response matches the `ScanAnalysisResponse` schema (`api/schemas.py`):
 Heatmap images are served statically at
 `http://localhost:8000/static/heatmaps/<filename>.png`.
 
+## 7. Friendly Next.js Frontend
+
+The `frontend/` directory contains a responsive Next.js + Tailwind interface
+for uploading scans, checking API health, and reviewing predictions. Start
+the FastAPI service first, then run the frontend:
+
+```bash
+cd frontend
+npm install
+```
+
+Create `frontend/.env.local` when the API is not running on the default local
+address:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+Then launch the UI:
+
+```bash
+npm run dev
+```
+
+Open **http://localhost:3000**. For a separate Render frontend service, set
+`NEXT_PUBLIC_API_URL` to the public URL of the FastAPI Render service and use
+`npm run build && npm run start` as the build/start workflow.
+
 ### `GET /api/v1/health`
 Reports whether the model checkpoint loaded successfully, current device
 (CPU/GPU), and backbone in use — useful for container/orchestration health
@@ -267,7 +295,7 @@ probes.
 
 ---
 
-## 7. Error Handling Notes
+## 8. Error Handling Notes
 
 - Corrupt/unreadable images return **HTTP 422** with a descriptive message
   rather than crashing the worker.
@@ -282,7 +310,7 @@ probes.
 
 ---
 
-## 8. Version Control (Git)
+## 9. Version Control (Git)
 
 ```bash
 cd radiography-anomaly-detection
@@ -300,7 +328,7 @@ The included `.gitignore` already excludes `venv/`, model checkpoints,
 generated heatmaps, and logs, so large/generated files won't get committed
 by accident.
 
-## 9. Opening in VS Code
+## 10. Opening in VS Code
 
 From inside the project folder:
 ```bash
@@ -311,7 +339,7 @@ Code manually via File → Open Folder instead.) From there, GitHub Copilot
 or any other in-editor assistant has full access to the codebase for
 further iteration.
 
-## 10. Extending This Prototype
+## 11. Extending This Prototype
 
 - Swap `config.CLASS_NAMES` + `config.NUM_CLASSES` to match your dataset's
   actual finding taxonomy.

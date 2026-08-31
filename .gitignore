@@ -7,3 +7,9 @@ dataset_sample/images/*.png
 dataset_sample/*.csv
 logs/*.log
 .env
+
+# Next.js frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env.local
