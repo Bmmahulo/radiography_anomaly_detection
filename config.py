@@ -84,6 +84,6 @@ IMAGENET_STD = [0.229, 0.224, 0.225]
 # API
 # ---------------------------------------------------------------------------
 API_HOST = "0.0.0.0"
-API_PORT = 8000
+API_PORT = int(os.environ.get("PORT", 8000))
 MAX_UPLOAD_SIZE_MB = 25
 ALLOWED_UPLOAD_EXTENSIONS = {".png", ".jpg", ".jpeg", ".dcm"}

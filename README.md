@@ -1,3 +1,13 @@
+---
+title: Radiography Anomaly Detection
+emoji: 🩻
+colorFrom: blue
+colorTo: red
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # Radiography Anomaly Detection — Local Prototype
 
 An AI-assisted triage prototype that analyzes X-ray scans, flags likely
