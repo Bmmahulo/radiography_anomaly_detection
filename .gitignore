@@ -1,7 +1,7 @@
 venv/
 __pycache__/
 *.pyc
-checkpoints/*.pt
+
 static/heatmaps/*.png
 dataset_sample/images/*.png
 dataset_sample/*.csv
