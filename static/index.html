@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Radiography Anomaly Detection</title>
+    <style>
+      :root {
+        --bg: #f6f7fb;
+        --panel: #ffffff;
+        --border: #dfe3ee;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --primary: #7c3aed;
+        --success: #16a34a;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .container {
+        max-width: 1100px;
+        margin: 48px auto;
+        padding: 0 20px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+        padding: 28px;
+      }
+
+      h1 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        font-size: clamp(2rem, 3vw, 2.6rem);
+      }
+
+      .subtitle {
+        color: var(--muted);
+        margin-bottom: 24px;
+      }
+
+      form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      input[type="file"] {
+        flex: 1 1 420px;
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: white;
+      }
+
+      button {
+        border: none;
+        background: var(--primary);
+        color: white;
+        padding: 12px 18px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      button:hover { filter: brightness(1.05); }
+
+      .status {
+        margin-top: 12px;
+        color: var(--muted);
+        min-height: 24px;
+      }
+
+      .result-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 18px;
+        margin-top: 24px;
+      }
+
+      .card {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        background: #fafbff;
+      }
+
+      .label {
+        color: var(--muted);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 8px;
+      }
+
+      .value {
+        font-size: 1.1rem;
+        font-weight: 700;
+      }
+
+      .priority-high { color: var(--danger); }
+      .priority-medium { color: var(--warning); }
+      .priority-low { color: var(--success); }
+
+      .image-wrap {
+        margin-top: 24px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+
+      .image-box {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        background: white;
+      }
+
+      .image-box img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        max-height: 420px;
+        object-fit: contain;
+        background: #f8fafc;
+      }
+
+      pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 0.9rem;
+        background: #111827;
+        color: #edf2ff;
+        padding: 14px;
+        border-radius: 12px;
+        overflow-x: auto;
+      }
+
+      @media (max-width: 700px) {
+        .image-wrap { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="panel">
+        <h1>Radiography Anomaly Detection</h1>
+        <div class="subtitle">Upload an X-ray image to run the anomaly model and view the Grad-CAM heatmap.</div>
+
+        <form id="uploadForm">
+          <input id="fileInput" type="file" accept=".png,.jpg,.jpeg,.dcm" required />
+          <button type="submit">Analyze image</button>
+        </form>
+
+        <div id="status" class="status">Ready.</div>
+
+        <div id="result" style="display: none;">
+          <div class="result-grid">
+            <div class="card">
+              <div class="label">Priority</div>
+              <div id="priority" class="value">-</div>
+            </div>
+            <div class="card">
+              <div class="label">Top finding</div>
+              <div id="topFinding" class="value">-</div>
+            </div>
+            <div class="card">
+              <div class="label">Confidence</div>
+              <div id="confidence" class="value">-</div>
+            </div>
+            <div class="card">
+              <div class="label">Processing time</div>
+              <div id="processingTime" class="value">-</div>
+            </div>
+          </div>
+
+          <div class="image-wrap">
+            <div class="image-box">
+              <div class="label" style="padding: 12px 12px 0;">Uploaded scan</div>
+              <img id="uploadedImage" alt="Uploaded X-ray" />
+            </div>
+            <div class="image-box">
+              <div class="label" style="padding: 12px 12px 0;">Heatmap</div>
+              <img id="heatmapImage" alt="Grad-CAM heatmap" />
+            </div>
+          </div>
+
+          <div class="card" style="margin-top: 24px;">
+            <div class="label">Class scores</div>
+            <pre id="classScores">{}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const form = document.getElementById('uploadForm');
+      const fileInput = document.getElementById('fileInput');
+      const statusEl = document.getElementById('status');
+      const resultEl = document.getElementById('result');
+
+      const apiBase = window.location.origin;
+      const endpoint = `${apiBase}/api/v1/scan/analyze`;
+
+      const setStatus = (message, isError = false) => {
+        statusEl.textContent = message;
+        statusEl.style.color = isError ? '#b91c1c' : '#6b7280';
+      };
+
+      const setPriorityClass = (priority) => {
+        const el = document.getElementById('priority');
+        el.classList.remove('priority-high', 'priority-medium', 'priority-low');
+        if (priority === 'HIGH') el.classList.add('priority-high');
+        else if (priority === 'MEDIUM') el.classList.add('priority-medium');
+        else el.classList.add('priority-low');
+      };
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const file = fileInput.files[0];
+        if (!file) {
+          setStatus('Please choose an image first.', true);
+          return;
+        }
+
+        setStatus('Uploading and analyzing image...');
+        resultEl.style.display = 'none';
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            body: formData,
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.detail || 'Request failed.');
+          }
+
+          document.getElementById('priority').textContent = data.priority || '-';
+          setPriorityClass(data.priority || 'LOW');
+          document.getElementById('topFinding').textContent = data.top_finding || '-';
+          document.getElementById('confidence').textContent = `${((data.top_finding_confidence || 0) * 100).toFixed(1)}%`;
+          document.getElementById('processingTime').textContent = `${data.processing_time_ms || 0} ms`;
+          document.getElementById('classScores').textContent = JSON.stringify(data.class_scores || {}, null, 2);
+
+          if (data.heatmap_url) {
+            document.getElementById('heatmapImage').src = data.heatmap_url;
+          } else {
+            document.getElementById('heatmapImage').src = '';
+          }
+
+          const objectUrl = URL.createObjectURL(file);
+          document.getElementById('uploadedImage').src = objectUrl;
+
+          setStatus('Analysis complete.');
+          resultEl.style.display = 'block';
+        } catch (error) {
+          setStatus(error.message || 'Something went wrong.', true);
+        }
+      });
+    </script>
+  </body>
+</html>

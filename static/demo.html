@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Radiography Anomaly Detector Demo</title>
+    <style>
+      :root {
+        --bg: #f3f6fb;
+        --panel: #ffffff;
+        --primary: #6d5efc;
+        --primary-dark: #4c3ef2;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --border: #e5e7eb;
+        --success: #16a34a;
+        --warning: #d97706;
+        --danger: #dc2626;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(180deg, #eef3ff 0%, #f7f8fc 100%);
+        color: var(--text);
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 40px auto;
+        padding: 0 22px;
+      }
+
+      .header {
+        margin-bottom: 30px;
+      }
+
+      .header h1 {
+        margin: 0 0 8px;
+        font-size: clamp(2rem, 3vw, 3rem);
+      }
+
+      .header p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 1.05rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 24px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+        padding: 24px;
+      }
+
+      .dropzone {
+        border: 2px dashed #c7d2fe;
+        border-radius: 16px;
+        background: linear-gradient(180deg, #f8faff 0%, #f5f3ff 100%);
+        padding: 28px;
+        text-align: center;
+      }
+
+      .dropzone input[type="file"] {
+        display: none;
+      }
+
+      .dropzone-label {
+        display: block;
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+      }
+
+      .dropzone small {
+        color: var(--muted);
+      }
+
+      .button {
+        margin-top: 18px;
+        display: inline-block;
+        border: none;
+        background: var(--primary);
+        color: white;
+        padding: 12px 20px;
+        font-size: 1rem;
+        font-weight: 700;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+
+      .button:hover { background: var(--primary-dark); }
+
+      .status {
+        margin-top: 18px;
+        min-height: 24px;
+        color: var(--muted);
+        font-size: 0.96rem;
+      }
+
+      .result-box {
+        margin-top: 28px;
+      }
+
+      .score-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(160px, 1fr));
+        gap: 16px;
+      }
+
+      .metric {
+        background: #f9fafb;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+      }
+
+      .metric-label {
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+
+      .metric-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+      }
+
+      .priority-high { color: var(--danger); }
+      .priority-medium { color: var(--warning); }
+      .priority-low { color: var(--success); }
+
+      .image-stack {
+        display: grid;
+        gap: 20px;
+      }
+
+      .image-card {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        overflow: hidden;
+        background: #fff;
+      }
+
+      .image-card .title {
+        padding: 12px 14px 0;
+        font-weight: 700;
+        color: var(--muted);
+      }
+
+      .image-card img {
+        display: block;
+        width: 100%;
+        max-height: 420px;
+        object-fit: contain;
+        background: #f8fafc;
+      }
+
+      pre {
+        margin: 18px 0 0;
+        padding: 14px;
+        background: #111827;
+        color: #eef2ff;
+        border-radius: 12px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 0.9rem;
+      }
+
+      @media (max-width: 860px) {
+        .grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Radiography Anomaly Detection</h1>
+        <p>Upload an X-ray and review a model prediction plus Grad-CAM heatmap overlay.</p>
+      </div>
+
+      <div class="grid">
+        <div class="panel">
+          <div class="dropzone">
+            <label class="dropzone-label" for="fileInput">Choose an image</label>
+            <small>PNG, JPG, JPEG, or DICOM accepted</small>
+            <input id="fileInput" type="file" accept=".png,.jpg,.jpeg,.dcm" />
+            <div>
+              <button class="button" id="submitBtn" type="button">Analyze image</button>
+            </div>
+          </div>
+
+          <div id="status" class="status">Ready to analyze.</div>
+
+          <div class="result-box" id="resultBox" style="display: none;">
+            <div class="score-row">
+              <div class="metric">
+                <div class="metric-label">Priority</div>
+                <div id="priority" class="metric-value">-</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">Top finding</div>
+                <div id="topFinding" class="metric-value">-</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">Confidence</div>
+                <div id="confidence" class="metric-value">-</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">Time</div>
+                <div id="processingTime" class="metric-value">-</div>
+              </div>
+            </div>
+
+            <pre id="classScores">{}</pre>
+          </div>
+        </div>
+
+        <div class="image-stack">
+          <div class="image-card">
+            <div class="title">Uploaded scan</div>
+            <img id="uploadedImage" alt="Uploaded image" src="" />
+          </div>
+          <div class="image-card">
+            <div class="title">Heatmap</div>
+            <img id="heatmapImage" alt="Heatmap" src="" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const submitBtn = document.getElementById('submitBtn');
+      const fileInput = document.getElementById('fileInput');
+      const resultBox = document.getElementById('resultBox');
+      const statusEl = document.getElementById('status');
+
+      const setStatus = (message, isError = false) => {
+        statusEl.textContent = message;
+        statusEl.style.color = isError ? '#b91c1c' : '#6b7280';
+      };
+
+      const setPriorityClass = (priority) => {
+        const el = document.getElementById('priority');
+        el.classList.remove('priority-high', 'priority-medium', 'priority-low');
+        if (priority === 'HIGH') el.classList.add('priority-high');
+        else if (priority === 'MEDIUM') el.classList.add('priority-medium');
+        else el.classList.add('priority-low');
+      };
+
+      submitBtn.addEventListener('click', async () => {
+        const file = fileInput.files[0];
+        if (!file) {
+          setStatus('Choose an image before running inference.', true);
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+        setStatus('Uploading and analyzing image...');
+        resultBox.style.display = 'none';
+
+        try {
+          const response = await fetch(`${window.location.origin}/api/v1/scan/analyze`, {
+            method: 'POST',
+            body: formData,
+          });
+
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.detail || 'The request failed.');
+          }
+
+          document.getElementById('priority').textContent = data.priority || '-';
+          setPriorityClass(data.priority || 'LOW');
+          document.getElementById('topFinding').textContent = data.top_finding || '-';
+          document.getElementById('confidence').textContent = `${((data.top_finding_confidence || 0) * 100).toFixed(1)}%`;
+          document.getElementById('processingTime').textContent = `${data.processing_time_ms || 0} ms`;
+          document.getElementById('classScores').textContent = JSON.stringify(data.class_scores || {}, null, 2);
+
+          document.getElementById('uploadedImage').src = URL.createObjectURL(file);
+          document.getElementById('heatmapImage').src = data.heatmap_url || '';
+
+          resultBox.style.display = 'block';
+          setStatus('Analysis complete.');
+        } catch (error) {
+          setStatus(error.message || 'Something went wrong.', true);
+        }
+      });
+    </script>
+  </body>
+</html>
