@@ -89,3 +89,14 @@ API_HOST = "0.0.0.0"
 API_PORT = int(os.environ.get("PORT", 8000))
 MAX_UPLOAD_SIZE_MB = 25
 ALLOWED_UPLOAD_EXTENSIONS = {".png", ".jpg", ".jpeg", ".dcm"}
+
+# Render free-tier instances are memory-constrained. Default to demo-safe mode on
+# Render, while preserving the option to run the real model when local or when
+# DEMO_MODE is explicitly disabled.
+RENDER_ENV = os.environ.get("RENDER") is not None
+DEMO_MODE = os.environ.get("DEMO_MODE", "true" if RENDER_ENV else "false").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}

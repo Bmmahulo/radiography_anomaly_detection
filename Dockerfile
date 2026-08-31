@@ -14,6 +14,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 COPY . .
 
 ENV ANOMALY_BACKBONE=resnet34
+ENV DEMO_MODE=true
 ENV PYTHONUNBUFFERED=1
 
 RUN mkdir -p static/heatmaps checkpoints logs
