@@ -83,21 +83,23 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 @app.on_event("startup")
 async def load_model_on_startup():
     """
-    Warms the model cache at server startup rather than on the first request,
-    so the first real user isn't the one paying the model-load latency.
-    Failure here is logged but non-fatal — /api/v1/health will report
-    `model_loaded: false` and /scan/analyze will surface a clear 500 with
-    the underlying error rather than crashing silently.
+    Avoid eager model loading in constrained environments like Render free tiers.
+    The model is loaded lazily on first inference request instead of at startup,
+    which prevents the process from being killed by an out-of-memory exit (137)
+    during boot.
     """
-    try:
-        get_model(config.BEST_MODEL_PATH)
-        logger.info("Model warmed and ready at startup.")
-    except Exception as e:
-        logger.error(
-            "Model failed to load at startup (checkpoint may not exist yet "
-            "— run train.py first). Server will still start. Error: %s",
-            e,
+    if not os.path.exists(config.BEST_MODEL_PATH):
+        logger.warning(
+            "Checkpoint %s not found. The app will stay up but inference will fail "
+            "until the model file is present.",
+            config.BEST_MODEL_PATH,
         )
+        return
+
+    logger.info(
+        "Startup complete. Model will be loaded on demand to reduce memory pressure "
+        "on constrained deployments."
+    )
 
 
 @app.get("/", tags=["root"])
