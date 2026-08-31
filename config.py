@@ -50,10 +50,9 @@ MEDIUM_PRIORITY_THRESHOLD = 0.5
 # ---------------------------------------------------------------------------
 # Model
 # ---------------------------------------------------------------------------
-# Render free-tier instances are memory-constrained, so default to a lighter
-# backbone to avoid startup OOM kills. Override with ANOMALY_BACKBONE if you
-# need a larger model on a paid instance.
-BACKBONE = os.environ.get("ANOMALY_BACKBONE", "efficientnet_b0")
+# The saved model checkpoints in this repo were trained using a ResNet-34 head,
+# so keep the default backbone aligned to the checkpoint to avoid load errors.
+BACKBONE = os.environ.get("ANOMALY_BACKBONE", "resnet34")
 PRETRAINED = True
 IMG_SIZE = 380 if "efficientnet" in BACKBONE else 224
 
