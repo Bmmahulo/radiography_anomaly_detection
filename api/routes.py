@@ -192,11 +192,12 @@ async def analyze_scan(file: UploadFile = File(...)):
 async def health_check():
     checkpoint_found = os.path.exists(config.BEST_MODEL_PATH)
     model_loaded = False
-    try:
-        get_model(config.BEST_MODEL_PATH)
-        model_loaded = True
-    except Exception as e:
-        logger.error("Health check: model failed to load: %s", e)
+    if not config.DEMO_MODE:
+        try:
+            get_model(config.BEST_MODEL_PATH)
+            model_loaded = True
+        except Exception as e:
+            logger.error("Health check: model failed to load: %s", e)
 
     status = "ok" if model_loaded or config.DEMO_MODE else "degraded"
     return HealthResponse(

@@ -4,6 +4,7 @@ __pycache__/
 
 static/heatmaps/*.png
 dataset_sample/images/*.png
+dataset_sample/images/*
 dataset_sample/*.csv
 logs/*.log
 .env

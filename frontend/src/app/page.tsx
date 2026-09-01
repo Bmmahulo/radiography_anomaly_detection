@@ -24,7 +24,8 @@ type AnalysisResult = {
   heatmap_url?: string | null;
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://radiography-anomaly-detection.onrender.com";
+const IS_LOCAL_FALLBACK = !process.env.NEXT_PUBLIC_API_URL;
 
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -49,6 +50,11 @@ export default function Home() {
           backbone: "resnet34",
           checkpoint_found: false,
         });
+        setError(
+          IS_LOCAL_FALLBACK
+            ? "The production API URL is not configured. Set NEXT_PUBLIC_API_URL in Vercel and redeploy."
+            : `The API is unreachable at ${API_URL}. Wake or restart the Render service, then try again.`,
+        );
       }
     };
 
@@ -99,7 +105,13 @@ export default function Home() {
 
       setResult(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
+      setError(
+        e instanceof TypeError
+          ? `Cannot reach the analysis API at ${API_URL}. Check the Vercel NEXT_PUBLIC_API_URL setting and the Render service status.`
+          : e instanceof Error
+            ? e.message
+            : "Something went wrong.",
+      );
     } finally {
       setLoading(false);
     }
