@@ -18,6 +18,7 @@ import uuid
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
+from PIL import Image, ImageDraw, ImageFilter
 
 import config
 from api.schemas import HealthResponse, ScanAnalysisResponse
@@ -39,6 +40,41 @@ def _validate_upload(upload: UploadFile) -> None:
                 f"Allowed: {sorted(config.ALLOWED_UPLOAD_EXTENSIONS)}"
             ),
         )
+
+
+def _create_demo_heatmap(image_path: str, request_id: str) -> str | None:
+    """Create a clearly marked, lightweight visual overlay for demo mode."""
+    try:
+        image = Image.open(image_path).convert("RGB")
+        width, height = image.size
+        overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(overlay)
+
+        center_x = width // 2
+        center_y = height // 2
+        radius_x = max(20, width // 4)
+        radius_y = max(20, height // 5)
+        draw.ellipse(
+            (
+                center_x - radius_x,
+                center_y - radius_y,
+                center_x + radius_x,
+                center_y + radius_y,
+            ),
+            fill=(239, 68, 68, 105),
+            outline=(250, 204, 21, 210),
+            width=max(2, min(width, height) // 80),
+        )
+        overlay = overlay.filter(ImageFilter.GaussianBlur(max(2, min(width, height) // 35)))
+        result = Image.alpha_composite(image.convert("RGBA"), overlay).convert("RGB")
+
+        filename = f"demo_heatmap_{request_id}.png"
+        output_path = os.path.join(config.HEATMAP_DIR, filename)
+        result.save(output_path, format="PNG")
+        return f"/static/heatmaps/{filename}"
+    except (OSError, ValueError) as error:
+        logger.warning("[%s] Could not create demo heatmap: %s", request_id, error)
+        return None
 
 
 @router.post(
@@ -106,7 +142,7 @@ async def analyze_scan(file: UploadFile = File(...)):
                 "top_finding_confidence": 0.63,
                 "flagged_findings": ["fracture"],
                 "class_scores": {"fracture": 0.63},
-                "heatmap_url": None,
+                "heatmap_url": _create_demo_heatmap(tmp_path, request_id),
             }
         else:
             result = run_inference(
